@@ -989,7 +989,22 @@ class RemoteAccount {
     var wantTurn = !skipTurn && preferred.contains(RemoteTransportMode.turn);
     var turnAvailable = false;
     Future<List<RemoteIceServer>> fetchIce(String id) async {
-      final servers = await api.turnCredentials(token, id);
+      // Self-hosted STUN/TURN injected at build time (see build-apk.yml).
+      const stun = String.fromEnvironment('DSH_STUN');
+      const turn = String.fromEnvironment('DSH_TURN');
+      const turnUser = String.fromEnvironment('DSH_TURN_USER');
+      const turnPass = String.fromEnvironment('DSH_TURN_PASS');
+      final selfHosted = <RemoteIceServer>[
+        if (stun.isNotEmpty) RemoteIceServer([stun]),
+        if (turn.isNotEmpty)
+          RemoteIceServer([turn],
+              username: turnUser.isEmpty ? null : turnUser,
+              credential: turnPass.isEmpty ? null : turnPass),
+      ];
+      final servers = <RemoteIceServer>[
+        ...selfHosted,
+        ...await api.turnCredentials(token, id),
+      ];
       turnAvailable = servers.any(
         (s) => s.urls.any((u) => RegExp(r'^turns?:', caseSensitive: false).hasMatch(u.trim())),
       );
