@@ -264,7 +264,7 @@ class RemoteAccount {
     this.peerConnector,
     this.preferredTransports,
     this.onDirectFallback,
-    this.directTimeout = const Duration(seconds: 8),
+    this.directTimeout = const Duration(seconds: 15),
   }) : serverUrl = normalizeServerUrl(serverUrl ?? defaultRemoteServer),
        _secrets = secrets,
        _socketConnector = socketConnector {
