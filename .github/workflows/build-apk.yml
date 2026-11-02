@@ -6,7 +6,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -17,26 +16,26 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: versions
-        run: flutter --version && java -version
+      - run: flutter --version
       - name: pub get
         working-directory: app
         run: flutter pub get
-      - name: build via official script (release)
-        id: rel
-        continue-on-error: true
-        run: bash tooling/build-apk.sh -f arm64 --release --keep-daemon
-      - name: build via official script (debug fallback)
-        if: steps.rel.outcome == 'failure'
-        run: bash tooling/build-apk.sh -f arm64 --debug --keep-daemon
+      - name: build apk
+        run: |
+          cd app
+          N=$(python3 -c "import time;print(int(time.time()//60))")
+          flutter build apk --release --flavor arm64 --target-platform android-arm64 \
+            --build-name 0.6.0 --build-number "$N" \
+            --dart-define=DSH_STUN=stun:168.138.212.82:3478 \
+            --dart-define=DSH_TURN=turn:168.138.212.82:3478 \
+            --dart-define=DSH_TURN_USER=${{ secrets.DSH_TURN_USER }} \
+            --dart-define=DSH_TURN_PASS=${{ secrets.DSH_TURN_PASS }}
       - name: locate apk
         if: always()
-        run: find . -name '*.apk' -not -path '*/.gradle/*' -printf '%s\t%p\n' || true
+        run: find . -name '*.apk' -not -path '*/.gradle/*' 2>/dev/null | head -20
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: dsh-go-apk
-          path: |
-            app/build/app/outputs/flutter-apk/*.apk
-            **/outputs/**/*.apk
+          path: app/build/app/outputs/flutter-apk/*.apk
           if-no-files-found: warn
