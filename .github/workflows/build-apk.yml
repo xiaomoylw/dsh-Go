@@ -22,21 +22,21 @@ jobs:
       - name: pub get
         working-directory: app
         run: flutter pub get
-      - name: build apk release
+      - name: build via official script (release)
         id: rel
         continue-on-error: true
-        working-directory: app
-        run: flutter build apk --release
-      - name: build apk debug fallback
+        run: bash tooling/build-apk.sh -f arm64 --release --keep-daemon
+      - name: build via official script (debug fallback)
         if: steps.rel.outcome == 'failure'
-        working-directory: app
-        run: flutter build apk --debug
-      - name: locate apk files
+        run: bash tooling/build-apk.sh -f arm64 --debug --keep-daemon
+      - name: locate apk
+        if: always()
         run: find . -name '*.apk' -not -path '*/.gradle/*' -printf '%s\t%p\n' || true
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: dsh-go-apk
           path: |
-            app/build/**/*.apk
+            app/build/app/outputs/flutter-apk/*.apk
             **/outputs/**/*.apk
           if-no-files-found: warn
