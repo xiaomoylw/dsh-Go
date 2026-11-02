@@ -6,7 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 70
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -22,14 +22,21 @@ jobs:
       - name: pub get
         working-directory: app
         run: flutter pub get
-      - name: build apk
+      - name: build apk release
+        id: rel
+        continue-on-error: true
         working-directory: app
-        run: |
-          flutter build apk --release || flutter build apk --debug
-      - name: list outputs
-        run: ls -lh app/build/app/outputs/flutter-apk/ || true
+        run: flutter build apk --release
+      - name: build apk debug fallback
+        if: steps.rel.outcome == 'failure'
+        working-directory: app
+        run: flutter build apk --debug
+      - name: locate apk files
+        run: find . -name '*.apk' -not -path '*/.gradle/*' -printf '%s\t%p\n' || true
       - uses: actions/upload-artifact@v4
         with:
           name: dsh-go-apk
-          path: app/build/app/outputs/flutter-apk/*.apk
+          path: |
+            app/build/**/*.apk
+            **/outputs/**/*.apk
           if-no-files-found: warn
